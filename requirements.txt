@@ -1,0 +1,3 @@
+cactus-needle[mic]==3.1.0
+PySide6==6.11.2
+pytest==9.1.1
