@@ -24,6 +24,37 @@ def test_unknown_application_is_rejected():
         actions.open_application("powershell -command whoami")
 
 
+def test_close_one_window_posts_normal_close_and_verifies(monkeypatch):
+    calls, states = [], [[(101, 44)], []]
+    monkeypatch.setattr(actions.os, "name", "nt", raising=False)
+    monkeypatch.setattr(actions, "_visible_windows", lambda names: states.pop(0))
+    monkeypatch.setattr(actions, "_wait_for_windows_closed", lambda names, pids: [])
+    class User32:
+        def PostMessageW(self, hwnd, message, wparam, lparam): calls.append((hwnd, message))
+    monkeypatch.setattr(actions.ctypes, "windll", type("Dll", (), {"user32": User32()})(), raising=False)
+    assert actions.close_application("Notepad") == "Closed Notepad (1 window(s))."
+    assert calls == [(101, 0x0010)]
+
+
+def test_close_multiple_windows_posts_each_and_reports_unsaved_dialog(monkeypatch):
+    calls = []
+    monkeypatch.setattr(actions.os, "name", "nt", raising=False)
+    monkeypatch.setattr(actions, "_visible_windows", lambda names: [(101, 44), (102, 45)])
+    monkeypatch.setattr(actions, "_wait_for_windows_closed", lambda names, pids: [(102, 45)])
+    class User32:
+        def PostMessageW(self, hwnd, message, wparam, lparam): calls.append(hwnd)
+    monkeypatch.setattr(actions.ctypes, "windll", type("Dll", (), {"user32": User32()})(), raising=False)
+    result = actions.close_application("Notepad")
+    assert calls == [101, 102]
+    assert "unsaved-changes dialog" in result
+
+
+def test_close_application_not_running(monkeypatch):
+    monkeypatch.setattr(actions.os, "name", "nt", raising=False)
+    monkeypatch.setattr(actions, "_visible_windows", lambda names: [])
+    assert actions.close_application("Notepad") == "Notepad is not running with a visible window."
+
+
 def test_chrome_alias_uses_detected_chrome(monkeypatch):
     seen = []
     monkeypatch.setattr(actions, "_chrome_command", lambda: ["C:/Chrome/chrome.exe"])
@@ -34,6 +65,30 @@ def test_chrome_alias_uses_detected_chrome(monkeypatch):
 
 def test_current_time_returns_a_nonempty_local_value():
     assert actions.get_current_time()
+
+
+@pytest.mark.parametrize(("raw", "expected"), [("leetcode.com", "https://leetcode.com"), ("www.github.com.", "https://www.github.com"), ("https://learn.microsoft.com", "https://learn.microsoft.com"), ("GitHub", "https://github.com")])
+def test_website_normalization(raw, expected):
+    assert actions.normalize_website(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["", "javascript:alert(1)", "file:///C:/secret", "https://user:pass@example.com", "open calculator please", "https://"])
+def test_invalid_website_is_rejected(raw):
+    with pytest.raises(ValueError):
+        actions.normalize_website(raw)
+
+
+def test_open_website_uses_default_browser(monkeypatch):
+    opened = []
+    monkeypatch.setattr(actions.webbrowser, "open", lambda url, new=0: opened.append((url, new)) or True)
+    result = actions.open_website("leetcode.com")
+    assert opened == [("https://leetcode.com", 2)]
+    assert "Opening https://leetcode.com" in result
+
+
+def test_open_website_reports_browser_failure(monkeypatch):
+    monkeypatch.setattr(actions.webbrowser, "open", lambda url, new=0: False)
+    assert "Could not open the website" in actions.open_website("github.com")
 
 def test_process_listing_filters_background_and_running_check(monkeypatch):
     class Result: stdout = '"chrome.exe","42","Console","1","10 K"\n"svchost.exe","9","Services","0","10 K"\n'

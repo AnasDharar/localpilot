@@ -28,12 +28,15 @@ After transcription, LocalPilot sends the text to Needle with a fixed tool allow
 - "What time is it?"
 - "Open Calculator", "Open Notepad", "Open Chrome", "Open File Explorer", "Open Windows Terminal", "Open Paint", "Open Snipping Tool", or "Open VS Code" (when installed).
 - "Open Settings", "Open Task Manager", "Open Clock", "Open sound settings", "Open Wi-Fi settings", "Open Bluetooth settings", or "Open display settings".
+- "Close Chrome", "Close Calculator", "Close Notepad", "Close File Explorer", "Close Windows Terminal", "Close VS Code", "Close Paint", "Close Settings", "Close Task Manager", or "Close Clock".
 - "Which applications are running?" and "Is Chrome running?"
 - "Set a timer for 60 seconds" and "Cancel my timer."
 
 Application names are aliases for a predefined allowlist. Settings pages use fixed `ms-settings:` URIs, desktop apps use fixed executable names or detected Chrome/VS Code installations, and launches never use `shell=True`. The current timer supports one timer at a time, displays its remaining time, and plays a Windows alert when complete. It works only while LocalPilot remains open; it will not survive app exit or shutdown.
 
 For reliable model argument grounding, simple spoken timer durations (for example, "one minute" and "five minutes") are converted locally to explicit seconds before the approved `set_timer` tool is selected.
+
+Application closing is limited to the same approved aliases. LocalPilot enumerates only visible top-level windows owned by exact allowlisted executable names, sends a normal Windows `WM_CLOSE` request, and checks whether those windows disappear. It does not force-kill an application. If a window remains, LocalPilot warns that an unsaved-changes dialog or an unresponsive application may be blocking closure; respond to that dialog directly. Force-close is deliberately not implemented because it requires an explicit GUI confirmation flow.
 
 ## Independent smoke tests
 
