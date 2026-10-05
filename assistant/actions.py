@@ -79,7 +79,7 @@ def get_current_time() -> str:
 
 @needle.tool
 def open_application(app_name: str) -> str:
-    """Open one approved Windows app or settings page. Args: app_name: known app name or alias."""
+    """Open a desktop application or Windows setting by name (e.g., Calculator, Notepad, Chrome, Explorer, Terminal, Paint, Snipping Tool, VS Code, Settings, Task Manager, Clock). Args: app_name: known app name or alias."""
     app = _canonical(app_name)
     try:
         if app in _URIS:
@@ -96,7 +96,7 @@ def open_application(app_name: str) -> str:
 
 @needle.tool(triggers=[r"\b(website|web site|\.com|\.org|\.net|github|youtube|leetcode)\b"])
 def open_website(website: str) -> str:
-    """Open an http or https public website in the user's default browser. Args: website: domain or URL."""
+    """Open a website URL or web domain in the default web browser (e.g., github.com, leetcode.com, youtube.com). Do NOT use for desktop apps like Calculator or Notepad. Args: website: domain or URL."""
     url = normalize_website(website)
     try:
         launched = webbrowser.open(url, new=2)
